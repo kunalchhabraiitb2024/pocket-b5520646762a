@@ -1,0 +1,346 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Classroom">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.png"><meta name="robots" content="noindex">
+<title>Pocket Classroom</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script src="lwc.js"></script>
+<style>
+  /* layout: one sticky control bar, the chart, then the candle tab under it (phone first) */
+  :root { color-scheme: dark;
+    --bg:#131722; --panel:#1e222d; --border:#2a2e39; --text:#d1d4dc; --dim:#8a8e99;
+    --accent:#2962ff; --buy:#26a69a; --sell:#ef5350; --t3:#ffb300; --why:#4dd0e1;
+    --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --num:ui-monospace,"SF Mono",Menlo,monospace; }
+  [hidden] { display:none !important; }
+  html, body { background:var(--bg); color:var(--text); font-family:var(--ui); }
+  body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--bg); }
+  .wrap { padding-left:max(12px, env(safe-area-inset-left,0px)); padding-right:max(12px, env(safe-area-inset-right,0px)); }
+  header { position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:var(--bg);
+           border-bottom:1px solid var(--border); padding-block:8px; display:flex; flex-direction:column; gap:8px; }
+  .row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  select, button { font:inherit; font-size:14px; color:var(--text); background:var(--panel);
+           border:1px solid var(--border); border-radius:6px; padding:6px 10px; }
+  button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .tog { display:inline-flex; align-items:center; gap:5px; font-size:13px; padding:5px 9px; }
+  .tog .dot { width:9px; height:9px; border-radius:50%; }
+  .tog:not(.on) { opacity:.45; }
+  .tog.on { background:var(--panel); border-color:#4a5060; color:var(--text); }
+  #date { flex:1; min-width:0; }
+  #legend { font:12px/1.4 var(--num); color:var(--dim); padding-block:6px; min-height:2.8em; font-variant-numeric:tabular-nums; }
+  #chart { height:56vh; min-height:300px; touch-action:none; }
+  #detail { padding-block:10px 40px; font-size:14px; line-height:1.45; }
+  #detail h2 { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); margin:0 0 6px; font-weight:600; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  td { padding:4px 6px 4px 0; border-bottom:1px solid var(--border); vertical-align:top; }
+  td:first-child { color:var(--dim); white-space:nowrap; width:1%; padding-right:12px; }
+  .card { margin-top:10px; padding:8px 10px; background:var(--panel); border-radius:6px; border-left:3px solid var(--dim); }
+  .card.BUY { border-left-color:var(--buy); } .card.SELL { border-left-color:var(--sell); }
+  .card.why { border-left-color:var(--why); }
+  .card div { margin-top:3px; }
+  .tag { display:inline-block; font-size:11px; padding:1px 6px; border-radius:4px; border:1px solid var(--border); color:var(--dim); margin-left:4px; }
+  .up { color:var(--buy); } .dn { color:var(--sell); } .hint { color:var(--dim); font-size:13px; }
+  .big { font-size:16px; font-weight:600; }
+</style>
+
+<header class="wrap">
+  <div class="row">
+    <select id="inst" aria-label="Chart"><option value="NIFTY">NIFTY</option><option value="BTC">BTCUSD</option></select>
+    <button id="prev" aria-label="Previous day">◀</button>
+    <select id="date" aria-label="Day"></select>
+    <button id="next" aria-label="Next day">▶</button>
+  </div>
+  <div class="row" id="tfs">
+    <button data-tf="1m">1m</button><button data-tf="3m" class="on">3m</button><button data-tf="5m">5m</button><button data-tf="15m">15m</button>
+    <span class="hint" id="note"></span>
+  </div>
+  <div class="row" aria-label="Price scale">
+    <span class="hint">Price</span>
+    <button id="pIn" aria-label="Zoom price in">↕ +</button><button id="pOut" aria-label="Zoom price out">↕ −</button>
+    <button id="pUp" aria-label="Move price up">▲</button><button id="pDn" aria-label="Move price down">▼</button>
+    <button id="pFit">Auto</button><span class="hint">v3</span>
+  </div>
+  <div class="row">
+    <button class="tog on" id="tBuy"><span class="dot" style="background:var(--buy)"></span>Buy</button>
+    <button class="tog on" id="tSell"><span class="dot" style="background:var(--sell)"></span>Sell</button>
+    <button class="tog on" id="tT3"><span class="dot" style="background:var(--t3)"></span>T3</button>
+    <button class="tog" id="tWhy"><span class="dot" style="background:var(--why)"></span>Trade reasons</button>
+    <button class="tog" id="tScc"><span class="dot" style="background:#5d6b80"></span>Cancelled</button>
+  </div>
+</header>
+<div class="wrap hint" id="offline" style="padding-block:4px">offline: checking…</div>
+<script>
+/* (user 2026-10-30) works with no internet: every file is saved on the phone
+   the first time the page opens online; after that sw.js serves them */
+const FILES = ["./", "index.html", "lwc.js", "manifest.json", "icon.png", "d/2026-06-17.json", "d/2026-06-18.json", "d/2026-06-19.json", "d/2026-06-22.json", "d/2026-06-23.json", "d/2026-06-24.json", "d/2026-06-25.json", "d/2026-06-29.json", "d/2026-06-30.json", "d/2026-07-01.json", "d/2026-07-02.json", "d/2026-07-03.json", "d/2026-07-06.json", "d/2026-07-07.json", "d/2026-07-08.json", "d/2026-07-09.json", "d/2026-07-10.json", "d/2026-07-13.json", "d/2026-07-14.json", "d/2026-07-15.json", "d/2026-07-16.json", "d/2026-07-17.json", "d/2026-07-20.json", "d/2026-07-21.json", "d/2026-07-22.json", "d/2026-07-23.json", "d/2026-07-24.json", "d/2026-07-27.json", "d/2026-07-28.json", "d/2026-07-29.json", "d/2026-07-30.json", "d/2026-07-31.json", "d/2026-08-03.json", "d/2026-08-04.json", "d/2026-08-05.json", "d/2026-08-06.json", "d/2026-08-07.json", "d/2026-08-10.json", "d/2026-08-11.json", "d/2026-08-12.json", "d/2026-08-13.json", "d/2026-08-14.json", "d/2026-08-17.json", "d/2026-08-18.json", "d/2026-08-19.json", "d/2026-08-20.json", "d/2026-08-21.json", "d/2026-08-24.json", "d/2026-08-25.json", "d/2026-08-26.json", "d/2026-08-27.json", "d/2026-08-28.json", "d/2026-08-31.json", "d/2026-09-01.json", "d/2026-09-02.json", "d/2026-09-03.json", "d/2026-09-04.json", "d/2026-09-07.json", "d/2026-09-08.json", "d/2026-09-09.json", "d/2026-09-10.json", "d/2026-09-11.json", "d/2026-09-15.json", "d/2026-09-16.json", "d/2026-09-17.json", "d/2026-09-18.json", "d/2026-09-21.json", "d/2026-09-22.json", "d/2026-09-23.json", "d/2026-09-24.json", "d/2026-09-25.json", "d/2026-09-28.json", "d/2026-09-29.json", "d/2026-09-30.json", "d/2026-10-01.json", "d/2026-10-05.json", "d/2026-10-06.json", "d/2026-10-07.json", "d/2026-10-08.json", "d/2026-10-09.json", "d/2026-10-12.json", "d/2026-10-13.json", "d/2026-10-14.json", "d/2026-10-15.json", "d/2026-10-16.json", "d/2026-10-19.json", "d/2026-10-21.json", "d/2026-10-22.json", "d/2026-10-23.json", "d/2026-10-26.json", "d/2026-10-27.json", "d/2026-10-28.json", "d/2026-10-29.json", "d/btc_15m.json", "d/btc_3m.json", "d/index.json", "d/trades.json"], CACHE = "pc-ac4fb0";
+(async () => {
+  const el = document.getElementById("offline");
+  if (!("serviceWorker" in navigator) || !window.caches) { el.textContent = "offline: not supported here, open from the home screen icon"; return; }
+  try { await navigator.serviceWorker.register("sw.js"); } catch (e) { el.textContent = "offline: could not start (" + e.message + ")"; return; }
+  const cache = await caches.open(CACHE); let have = 0, failed = 0;
+  for (const f of FILES) {
+    if (await cache.match(f)) { have++; continue; }
+    try { await cache.add(f); have++; } catch (e) { failed++; }
+    el.textContent = `offline: saving ${have}/${FILES.length}…`;
+  }
+  el.textContent = failed ? `offline: ${have}/${FILES.length} saved, ${failed} missing. Open again with internet to finish.`
+                          : `offline: ready ✓ all ${FILES.length} files saved on this phone`;
+  el.style.color = failed ? "var(--sell)" : "var(--buy)";
+})();
+</script>
+<div class="wrap" id="legend">loading…</div>
+<div id="chart"></div>
+<section class="wrap" id="detail"><h2>Candle</h2><div class="hint">Tap any candle to see its T2, T3, no-wick and whether it gave a sign.</div></section>
+
+<script>
+const LWC = window.LightweightCharts;
+const C = { buy:"#26a69a", sell:"#ef5350", buyDim:"#1d6b63", sellDim:"#8f3634", muted:"#5d6b80", t3:"#ffb300", why:"#4dd0e1" };
+const state = { inst:"NIFTY", tf:"3m", date:null, dates:[], cache:{}, d:null, byTime:{}, sigByTime:{}, trades:[] };
+const store = { get(k) { try { return localStorage.getItem("pocket." + k); } catch (e) { return null; } },
+                set(k, v) { try { localStorage.setItem("pocket." + k, v); } catch (e) {} } };
+const fmt = (t, o) => new Date(Number(t) * 1000).toLocaleString("en-GB", { timeZone:"Asia/Kolkata", hour12:false, ...o });
+const hhmm = (t) => fmt(t, { hour:"2-digit", minute:"2-digit" });
+const dmy = (t) => fmt(t, { day:"2-digit", month:"short" });
+const n2 = (x) => (x == null ? "—" : Number(x).toFixed(2));
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const istTs = (day, hm) => Date.parse(`${day}T${hm}:00+05:30`) / 1000;
+const on = (id) => document.getElementById(id).classList.contains("on");
+
+const chart = LWC.createChart(document.getElementById("chart"), {
+  autoSize:true,
+  layout:{ background:{ type:"solid", color:"#131722" }, textColor:"#b2b5be", fontSize:11 },
+  grid:{ vertLines:{ color:"rgba(42,46,57,0.55)" }, horzLines:{ color:"rgba(42,46,57,0.55)" } },
+  rightPriceScale:{ borderColor:"#2a2e39", scaleMargins:{ top:0.1, bottom:0.08 } },
+  timeScale:{ borderColor:"#2a2e39", timeVisible:true, secondsVisible:false, rightOffset:4, tickMarkFormatter:(t) => hhmm(t) },
+  localization:{ timeFormatter:(t) => fmt(t, { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) },
+  crosshair:{ mode:LWC.CrosshairMode.Normal },
+  handleScale:{ pinch:true, axisPressedMouseMove:true, mouseWheel:true },
+  // (user 2026-10-29, phone) a vertical drag on the chart or the price axis must
+  // move/scale the price, not scroll the page, so touches on the chart stay here
+  handleScroll:{ horzTouchDrag:true, vertTouchDrag:true, pressedMouseMove:true, mouseWheel:true },
+});
+// (user 2026-10-29) on his phone an up-down swipe on the price axis still
+// scrolled the page: iPhone Safari does not always obey touch-action, so every
+// touch move on the chart is stopped from reaching the page here
+for (const ev of ["touchmove", "touchstart"])
+  document.getElementById("chart").addEventListener(ev, (e) => { if (ev === "touchmove") e.preventDefault(); }, { passive:false });
+document.addEventListener("gesturestart", (e) => { if (e.target.closest && e.target.closest("#chart")) e.preventDefault(); }, { passive:false });
+const series = chart.addCandlestickSeries({ upColor:C.buy, downColor:C.sell, borderUpColor:C.buy,
+  borderDownColor:C.sell, wickUpColor:C.buy, wickDownColor:C.sell });
+
+/* price zoom buttons: the visible price range is the auto range, scaled by
+   pz around its middle and moved by pm (in units of the range) */
+const pv = { z:1, m:0 };
+series.applyOptions({ autoscaleInfoProvider:(orig) => {
+  const r = orig(); if (!r || !r.priceRange) return r;
+  const { minValue:a, maxValue:b } = r.priceRange, mid = (a + b) / 2, half = (b - a) / 2 * pv.z, sh = (b - a) * pv.m;
+  return { ...r, priceRange:{ minValue:mid - half + sh, maxValue:mid + half + sh } };
+} });
+function priceView(z, m) {
+  pv.z = Math.min(20, Math.max(0.05, pv.z * z)); pv.m += m * pv.z;
+  chart.priceScale("right").applyOptions({ autoScale:true });   // re-run the range with pv
+}
+document.getElementById("pIn").onclick = () => priceView(0.7, 0);
+document.getElementById("pOut").onclick = () => priceView(1 / 0.7, 0);
+document.getElementById("pUp").onclick = () => priceView(1, 0.15);
+document.getElementById("pDn").onclick = () => priceView(1, -0.15);
+document.getElementById("pFit").onclick = () => { pv.z = 1; pv.m = 0; priceView(1, 0); };
+
+/* the same rules as the classroom page (precomputed signs, drawn here) */
+// buy and sell signs one at a time: a sign on the same side as the last kept one is hidden
+function alternate(signals) {
+  let last = null, lastTs = null;
+  const order = [...signals].sort((a, b) => (a.fire_ts - b.fire_ts) || (a.entry_ts - b.entry_ts));
+  for (const s of order) {
+    s.skipped = false; s.after_ts = null;
+    if (s.scc_reverted) continue;
+    if (s.side === last) { s.skipped = true; s.after_ts = lastTs; continue; }
+    last = s.side; lastTs = s.entry_ts;
+  }
+}
+function markers(bars) {
+  const mk = [], first = bars.length ? bars[0].time : 0;
+  for (const s of state.d.s) {
+    if (s.skipped || s.entry_ts < first) continue;
+    if (s.scc_reverted ? !on("tScc") : (s.side === "BUY" ? !on("tBuy") : !on("tSell"))) continue;
+    const buy = s.side === "BUY";
+    let text = s.kind === "no_wick" ? "NW" : (buy ? "BC" : "SC");
+    if (s.t3_crossed) text += "*";
+    if (s.scc_reverted) text += "×";
+    const color = s.scc_reverted ? C.muted : (buy ? (s.useful ? C.buy : C.buyDim) : (s.useful ? C.sell : C.sellDim));
+    mk.push({ time:s.entry_ts, position: buy ? "belowBar" : "aboveBar", color, shape: buy ? "arrowUp" : "arrowDown", text });
+  }
+  if (on("tT3")) for (let i = 1; i < bars.length; i++) {
+    const b = bars[i], p = bars[i - 1], len = p.high - p.low;
+    if (!(len > 0)) continue;
+    if (b.high >= b.open + len) mk.push({ time:b.time, position:"belowBar", color:C.t3, shape:"circle", text:"T3 B" });
+    if (b.low <= b.open - len) mk.push({ time:b.time, position:"aboveBar", color:C.t3, shape:"circle", text:"T3 S" });
+  }
+  if (on("tWhy")) for (const t of tradesHere()) {
+    const buy = t.side === "BUY";
+    mk.push({ time:t.at, position: buy ? "belowBar" : "aboveBar", color:C.why,
+              shape: t.action === "skip" ? "circle" : (buy ? "arrowUp" : "arrowDown"),
+              text:`T ${t.action === "skip" ? "skip " : ""}${t.side || ""} ${t.reason_category || ""}`.trim() });
+  }
+  return mk.sort((a, b) => a.time - b.time);
+}
+function candleAt(ts) {
+  const bars = state.bars, step = state.step;
+  for (let i = bars.length - 1; i >= 0; i--) if (bars[i].time <= ts) return ts < bars[i].time + step ? bars[i].time : null;
+  return null;
+}
+function tradesHere() {
+  if (state.inst !== "NIFTY") return [];
+  return state.trades.filter(t => t.inst === "NIFTY" && t.day === state.date && /^\d{1,2}:\d{2}$/.test(t.time || ""))
+    .map(t => ({ ...t, at: candleAt(istTs(t.day, t.time.padStart(5, "0"))) })).filter(t => t.at != null);
+}
+function draw(fit) {
+  const d = state.d;
+  state.bars = d.c.map(([time, open, high, low, close]) => ({ time, open, high, low, close }));
+  state.step = state.bars.length > 1 ? state.bars[1].time - state.bars[0].time : 180;
+  state.byTime = {}; for (const b of state.bars) state.byTime[b.time] = b;
+  series.setData(state.bars);
+  series.setMarkers(markers(state.bars));
+  if (fit) {
+    pv.z = 1; pv.m = 0; chart.priceScale("right").applyOptions({ autoScale:true });
+    const n = state.bars.length;
+    if (state.inst === "BTC") chart.timeScale().setVisibleLogicalRange({ from:n - 120, to:n + 3 });
+    else chart.timeScale().fitContent();
+  }
+  const last = state.bars[state.bars.length - 1];
+  const today = d.s.filter(s => !s.scc_reverted && !s.skipped && s.entry_ts >= (d.day_start || 0));
+  document.getElementById("legend").innerHTML = state.inst === "NIFTY"
+    ? `NIFTY 50 · ${d.tf} · ${d.date} (+ last 15 candles of ${d.prev_date || "—"})<br>signs this day: <span class="up">${today.filter(s => s.side === "BUY").length} buy</span> · <span class="dn">${today.filter(s => s.side === "SELL").length} sell</span>`
+    : `BTCUSD · ${d.tf} · ${dmy(state.bars[0].time)} → ${dmy(last.time)} ${hhmm(last.time)} IST · swipe left for older days<br>saved ${dmy(last.time)}, not live`;
+}
+
+/* candle tab */
+const tradedHi = (c, f) => f.traded_high ?? c.high, tradedLo = (c, f) => f.traded_low ?? c.low;
+function crossTag(c, f, side) {
+  const buy = side === "BUY", w = buy ? "high" : "low", cls = buy ? "up" : "dn";
+  const t2 = buy ? f.buy_t2 : f.sell_t2, t3 = buy ? f.buy_t3 : f.sell_t3, px = buy ? tradedHi(c, f) : tradedLo(c, f);
+  const past = (x, lvl) => buy ? x >= lvl : x <= lvl;
+  if (past(px, t3)) return ` <b class="${cls}">${w} crossed T3</b>`;
+  if (past(px, t2)) return ` <b class="${cls}">${w} crossed T2</b>`;
+  if (past(buy ? c.high : c.low, t2)) return ` <span class="tag">T2 reached only by the close, not traded</span>`;
+  return ` <span class="hint">not crossed</span>`;
+}
+function nwOf(c, f, side) {
+  if (!f || !(f.prev_len > 0)) return null;
+  const limit = Math.ceil(f.prev_len / 6 * 10 - 1e-9) / 10;
+  const wick = Math.round((side === "BUY" ? c.open - tradedLo(c, f) : tradedHi(c, f) - c.open) * 10) / 10;
+  return { wick, limit, level: side === "BUY" ? c.open - limit : c.open + limit, held: wick <= limit + 1e-9 };
+}
+function checkSign(c, f, side) {
+  const buy = side === "BUY", w = buy ? "buy" : "sell", t2 = buy ? f.buy_t2 : f.sell_t2;
+  const s = (state.sigByTime[c.time] || []).find(x => x.side === side);
+  let ans, why = [];
+  if (s && s.scc_reverted) {
+    ans = `NO ${w} sign (it fired, then SCC cancelled it)`;
+    why.push(`fired at ${hhmm(s.fire_ts)}, then the SCC line ${n2(s.scc_level)} broke at ${hhmm(s.scc_ts)}, so the sign never existed`);
+  } else if (s) {
+    ans = `YES, a ${w} sign` + (s.useful ? " · useful" : " · not useful") + (s.t3_crossed ? " · T3 crossed" : "");
+    why.push(s.path === "A" ? `path A: the prev candle (${hhmm(f.prev_time)}) is a ${buy ? "buying" : "selling"} candle`
+                            : `path B: this candle was no-wick when it crossed T2`);
+    why.push(`T2 ${n2(t2)} = open ${n2(s.entry_open)} ${buy ? "+" : "−"} ceil(${n2(s.prev_len)}/3), crossed at ${hhmm(s.fire_ts)}${s.fire_instant === "open" ? " (at the open)" : ""}`);
+    why.push(s.skipped ? `hidden on the chart only because the last shown sign was also a ${w} (${hhmm(s.after_ts)}). This is a same-side sign, so it can be a breakout`
+                       : `shown on the chart`);
+  } else {
+    const rj = buy ? f.buy_reject : f.sell_reject;
+    ans = `NO ${w} sign`;
+    if (rj) {
+      why.push(`price did cross ${w} T2 ${n2(t2)} at ${hhmm(rj.ts)}`);
+      why.push(`path A failed: the prev candle (${hhmm(f.prev_time)}) is not a ${buy ? "buying" : "selling"} candle`);
+      why.push(`path B failed: at that minute the ${buy ? "lower" : "upper"} wick was ${n2(rj.wick)}, more than the no-wick limit ${rj.wick_limit ?? "—"}`);
+    } else {
+      const reach = buy ? tradedHi(c, f) : tradedLo(c, f);
+      why.push(`price never crossed ${w} T2 ${n2(t2)} with a trade: the ${buy ? "high" : "low"} was ${n2(reach)}, short by ${n2(Math.abs(t2 - reach))}`);
+      why.push(`path A: the prev candle ${(buy ? f.prev_buying : f.prev_selling) ? "is" : "is not"} a ${buy ? "buying" : "selling"} candle`);
+    }
+  }
+  return `<div class="card ${side}"><b class="${buy ? "up" : "dn"}">${esc(ans)}</b>${why.map(x => `<div>${esc(x)}</div>`).join("")}</div>`;
+}
+function detail(t) {
+  const c = state.byTime[t]; if (!c) return;
+  const f = state.d.f[t];
+  let h = `<h2>Candle</h2><div class="big">${state.inst === "NIFTY" ? "NIFTY" : "BTCUSD"} · ${dmy(t)} ${hhmm(t)} · ${state.d.tf}</div><table>
+    <tr><td>O / H / L / C</td><td>${n2(c.open)} / ${n2(c.high)} / ${n2(c.low)} / ${n2(c.close)}</td></tr>`;
+  if (f) {
+    h += `<tr><td>prev candle</td><td>${hhmm(f.prev_time)} · length ${n2(f.prev_len)}</td></tr>
+      <tr><td>prev candle is</td><td>${f.prev_buying ? '<b class="up">buying candle</b>' : f.prev_selling ? '<b class="dn">selling candle</b>' : "neither buying nor selling"}</td></tr>
+      <tr><td>buy T2 / T3</td><td>${n2(f.buy_t2)} / ${n2(f.buy_t3)}${crossTag(c, f, "BUY")}</td></tr>
+      <tr><td>sell T2 / T3</td><td>${n2(f.sell_t2)} / ${n2(f.sell_t3)}${crossTag(c, f, "SELL")}</td></tr>`;
+    for (const side of ["BUY", "SELL"]) {
+      const nw = nwOf(c, f, side); if (!nw) continue;
+      const buy = side === "BUY";
+      h += `<tr><td>${buy ? "buy" : "sell"} no-wick</td><td>${n2(nw.level)} · ${buy ? "lower" : "upper"} wick ${nw.wick} of ${nw.limit} ${nw.held ? `<b class="${buy ? "up" : "dn"}">held</b>` : '<span class="hint">broken</span>'}</td></tr>`;
+    }
+    h += `</table><div class="hint" style="margin-top:6px">T2 = open ± ceil(prev length / 3). T3 = open ± prev length. No-wick limit = prev length / 6.</div>`;
+    h += checkSign(c, f, "BUY") + checkSign(c, f, "SELL");
+  } else h += `</table><div class="hint">First candle loaded, so there is no prev candle to measure from.</div>`;
+  for (const tr of tradesHere().filter(x => x.at === t))
+    h += `<div class="card why"><b>Your trade: ${esc(tr.action || "")} ${esc(tr.side || "")} · ${esc(tr.reason_category || "")}</b>
+      <div class="hint">${esc(tr.time)} ${esc(tr.tf || "")}${tr.chart === "call_option" ? " · read on the call chart" : ""}</div>
+      <div>${esc(tr.reason_detail || "")}</div>${tr.quote ? `<div class="hint">“${esc(tr.quote)}”</div>` : ""}</div>`;
+  document.getElementById("detail").innerHTML = h;
+}
+chart.subscribeClick((p) => { if (p.time != null) detail(p.time); });
+
+/* loading */
+async function getJSON(path) {
+  const emb = document.querySelector(`script[data-path="${path}"]`);
+  if (emb) return (state.cache[path] ||= JSON.parse(emb.textContent));
+  if (!state.cache[path]) state.cache[path] = fetch(path).then(r => { if (!r.ok) throw new Error(path + " " + r.status); return r.json(); });
+  return state.cache[path];
+}
+async function load(fit = true) {
+  const isN = state.inst === "NIFTY";
+  // NIFTY has 1m/3m/5m, BTC has 3m/15m (user 2026-10-30)
+  const tfsOf = isN ? ["1m", "3m", "5m"] : ["3m", "15m"];
+  if (!tfsOf.includes(state.tf)) state.tf = isN ? "3m" : "15m";
+  for (const x of document.querySelectorAll("[data-tf]")) { x.hidden = !tfsOf.includes(x.dataset.tf); x.classList.toggle("on", x.dataset.tf === state.tf); }
+  document.getElementById("note").hidden = !isN;
+  for (const id of ["prev", "next", "date"]) document.getElementById(id).hidden = !isN;
+  document.getElementById("legend").textContent = "loading…";
+  try {
+    const d = isN ? (await getJSON(`d/${state.date}.json`))[state.tf] : await getJSON(`d/btc_${state.tf}.json`);
+    if (!d) { document.getElementById("legend").textContent = `No ${state.tf} data saved for ${state.date}.`; series.setData([]); return; }
+    state.d = d; alternate(d.s);
+    state.sigByTime = {}; for (const s of d.s) (state.sigByTime[s.entry_ts] ||= []).push(s);
+    draw(fit);
+    document.getElementById("detail").innerHTML = `<h2>Candle</h2><div class="hint">Tap any candle to see its T2, T3, no-wick and whether it gave a sign.</div>`;
+  } catch (e) { document.getElementById("legend").textContent = "Could not load: " + e.message; }
+  store.set("inst", state.inst); store.set("tf", state.tf); store.set("date", state.date);
+}
+document.getElementById("inst").onchange = (e) => { state.inst = e.target.value; load(); };
+document.getElementById("date").onchange = (e) => { state.date = e.target.value; load(); };
+const step = (k) => { const i = state.dates.indexOf(state.date) + k; if (i >= 0 && i < state.dates.length) { state.date = state.dates[i]; document.getElementById("date").value = state.date; load(); } };
+document.getElementById("prev").onclick = () => step(-1);
+document.getElementById("next").onclick = () => step(1);
+for (const b of document.querySelectorAll("[data-tf]")) b.onclick = () => {
+  state.tf = b.dataset.tf;
+  for (const x of document.querySelectorAll("[data-tf]")) x.classList.toggle("on", x === b);
+  load();
+};
+for (const id of ["tBuy", "tSell", "tT3", "tWhy", "tScc"]) {
+  const el = document.getElementById(id), saved = store.get(id);
+  if (saved != null) el.classList.toggle("on", saved === "1");
+  el.onclick = () => { el.classList.toggle("on"); store.set(id, on(id) ? "1" : "0"); if (state.d) series.setMarkers(markers(state.bars)); };
+}
+(async () => {
+  state.dates = await getJSON("d/index.json");
+  state.trades = await getJSON("d/trades.json").catch(() => []);
+  const sel = document.getElementById("date");
+  sel.innerHTML = [...state.dates].reverse().map(d => `<option value="${d}">${new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday:"short", day:"2-digit", month:"short" })}</option>`).join("");
+  const sd = store.get("date"), st = store.get("tf"), si = store.get("inst");
+  state.date = state.dates.includes(sd) ? sd : state.dates[state.dates.length - 1];
+  if (["1m", "3m", "5m", "15m"].includes(st)) state.tf = st;
+  if (si === "BTC" || si === "NIFTY") state.inst = si;
+  sel.value = state.date; document.getElementById("inst").value = state.inst;
+  for (const x of document.querySelectorAll("[data-tf]")) x.classList.toggle("on", x.dataset.tf === state.tf);
+  document.getElementById("note").textContent = `${state.dates.length} days saved, ${state.dates[0].slice(5)} → ${state.dates[state.dates.length - 1].slice(5)}`;
+  load();
+})();
+</script>
