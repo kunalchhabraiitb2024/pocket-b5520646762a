@@ -1,4 +1,4 @@
-const CACHE = "pc-ac4fb0";
+const CACHE = "pc-v4nu01";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);

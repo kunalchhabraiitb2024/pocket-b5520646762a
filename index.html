@@ -47,7 +47,7 @@
 
 <header class="wrap">
   <div class="row">
-    <select id="inst" aria-label="Chart"><option value="NIFTY">NIFTY</option><option value="BTC">BTCUSD</option></select>
+    <select id="inst" aria-label="Chart"><option value="NIFTY">NIFTY</option><option value="CALL">NIFTY call</option><option value="BTC">BTCUSD</option></select>
     <button id="prev" aria-label="Previous day">◀</button>
     <select id="date" aria-label="Day"></select>
     <button id="next" aria-label="Next day">▶</button>
@@ -60,7 +60,7 @@
     <span class="hint">Price</span>
     <button id="pIn" aria-label="Zoom price in">↕ +</button><button id="pOut" aria-label="Zoom price out">↕ −</button>
     <button id="pUp" aria-label="Move price up">▲</button><button id="pDn" aria-label="Move price down">▼</button>
-    <button id="pFit">Auto</button><span class="hint">v3</span>
+    <button id="pFit">Auto</button><span class="hint">v5</span>
   </div>
   <div class="row">
     <button class="tog on" id="tBuy"><span class="dot" style="background:var(--buy)"></span>Buy</button>
@@ -68,13 +68,14 @@
     <button class="tog on" id="tT3"><span class="dot" style="background:var(--t3)"></span>T3</button>
     <button class="tog" id="tWhy"><span class="dot" style="background:var(--why)"></span>Trade reasons</button>
     <button class="tog" id="tScc"><span class="dot" style="background:#5d6b80"></span>Cancelled</button>
+    <button class="tog" id="tNU"><span class="dot" style="background:#8f3634"></span>Not useful only</button>
   </div>
 </header>
 <div class="wrap hint" id="offline" style="padding-block:4px">offline: checking…</div>
 <script>
 /* (user 2026-10-30) works with no internet: every file is saved on the phone
    the first time the page opens online; after that sw.js serves them */
-const FILES = ["./", "index.html", "lwc.js", "manifest.json", "icon.png", "d/2026-06-17.json", "d/2026-06-18.json", "d/2026-06-19.json", "d/2026-06-22.json", "d/2026-06-23.json", "d/2026-06-24.json", "d/2026-06-25.json", "d/2026-06-29.json", "d/2026-06-30.json", "d/2026-07-01.json", "d/2026-07-02.json", "d/2026-07-03.json", "d/2026-07-06.json", "d/2026-07-07.json", "d/2026-07-08.json", "d/2026-07-09.json", "d/2026-07-10.json", "d/2026-07-13.json", "d/2026-07-14.json", "d/2026-07-15.json", "d/2026-07-16.json", "d/2026-07-17.json", "d/2026-07-20.json", "d/2026-07-21.json", "d/2026-07-22.json", "d/2026-07-23.json", "d/2026-07-24.json", "d/2026-07-27.json", "d/2026-07-28.json", "d/2026-07-29.json", "d/2026-07-30.json", "d/2026-07-31.json", "d/2026-08-03.json", "d/2026-08-04.json", "d/2026-08-05.json", "d/2026-08-06.json", "d/2026-08-07.json", "d/2026-08-10.json", "d/2026-08-11.json", "d/2026-08-12.json", "d/2026-08-13.json", "d/2026-08-14.json", "d/2026-08-17.json", "d/2026-08-18.json", "d/2026-08-19.json", "d/2026-08-20.json", "d/2026-08-21.json", "d/2026-08-24.json", "d/2026-08-25.json", "d/2026-08-26.json", "d/2026-08-27.json", "d/2026-08-28.json", "d/2026-08-31.json", "d/2026-09-01.json", "d/2026-09-02.json", "d/2026-09-03.json", "d/2026-09-04.json", "d/2026-09-07.json", "d/2026-09-08.json", "d/2026-09-09.json", "d/2026-09-10.json", "d/2026-09-11.json", "d/2026-09-15.json", "d/2026-09-16.json", "d/2026-09-17.json", "d/2026-09-18.json", "d/2026-09-21.json", "d/2026-09-22.json", "d/2026-09-23.json", "d/2026-09-24.json", "d/2026-09-25.json", "d/2026-09-28.json", "d/2026-09-29.json", "d/2026-09-30.json", "d/2026-10-01.json", "d/2026-10-05.json", "d/2026-10-06.json", "d/2026-10-07.json", "d/2026-10-08.json", "d/2026-10-09.json", "d/2026-10-12.json", "d/2026-10-13.json", "d/2026-10-14.json", "d/2026-10-15.json", "d/2026-10-16.json", "d/2026-10-19.json", "d/2026-10-21.json", "d/2026-10-22.json", "d/2026-10-23.json", "d/2026-10-26.json", "d/2026-10-27.json", "d/2026-10-28.json", "d/2026-10-29.json", "d/btc_15m.json", "d/btc_3m.json", "d/index.json", "d/trades.json"], CACHE = "pc-ac4fb0";
+const FILES = ["./", "index.html", "lwc.js", "manifest.json", "icon.png", "d/2026-06-17.json", "d/2026-06-18.json", "d/2026-06-19.json", "d/2026-06-22.json", "d/2026-06-23.json", "d/2026-06-24.json", "d/2026-06-25.json", "d/2026-06-29.json", "d/2026-06-30.json", "d/2026-07-01.json", "d/2026-07-02.json", "d/2026-07-03.json", "d/2026-07-06.json", "d/2026-07-07.json", "d/2026-07-08.json", "d/2026-07-09.json", "d/2026-07-10.json", "d/2026-07-13.json", "d/2026-07-14.json", "d/2026-07-15.json", "d/2026-07-16.json", "d/2026-07-17.json", "d/2026-07-20.json", "d/2026-07-21.json", "d/2026-07-22.json", "d/2026-07-23.json", "d/2026-07-24.json", "d/2026-07-27.json", "d/2026-07-28.json", "d/2026-07-29.json", "d/2026-07-30.json", "d/2026-07-31.json", "d/2026-08-03.json", "d/2026-08-04.json", "d/2026-08-05.json", "d/2026-08-06.json", "d/2026-08-07.json", "d/2026-08-10.json", "d/2026-08-11.json", "d/2026-08-12.json", "d/2026-08-13.json", "d/2026-08-14.json", "d/2026-08-17.json", "d/2026-08-18.json", "d/2026-08-19.json", "d/2026-08-20.json", "d/2026-08-21.json", "d/2026-08-24.json", "d/2026-08-25.json", "d/2026-08-26.json", "d/2026-08-27.json", "d/2026-08-28.json", "d/2026-08-31.json", "d/2026-09-01.json", "d/2026-09-02.json", "d/2026-09-03.json", "d/2026-09-04.json", "d/2026-09-07.json", "d/2026-09-08.json", "d/2026-09-09.json", "d/2026-09-10.json", "d/2026-09-11.json", "d/2026-09-15.json", "d/2026-09-16.json", "d/2026-09-17.json", "d/2026-09-18.json", "d/2026-09-21.json", "d/2026-09-22.json", "d/2026-09-23.json", "d/2026-09-24.json", "d/2026-09-25.json", "d/2026-09-28.json", "d/2026-09-29.json", "d/2026-09-30.json", "d/2026-10-01.json", "d/2026-10-05.json", "d/2026-10-06.json", "d/2026-10-07.json", "d/2026-10-08.json", "d/2026-10-09.json", "d/2026-10-12.json", "d/2026-10-13.json", "d/2026-10-14.json", "d/2026-10-15.json", "d/2026-10-16.json", "d/2026-10-19.json", "d/2026-10-21.json", "d/2026-10-22.json", "d/2026-10-23.json", "d/2026-10-26.json", "d/2026-10-27.json", "d/2026-10-28.json", "d/2026-10-29.json", "d/btc_15m.json", "d/btc_3m.json", "d/index.json", "d/trades.json", "d/call/2026-06-17.json", "d/call/2026-06-18.json", "d/call/2026-06-19.json", "d/call/2026-06-22.json", "d/call/2026-06-23.json", "d/call/2026-06-24.json", "d/call/2026-06-25.json", "d/call/2026-06-29.json", "d/call/2026-06-30.json", "d/call/2026-07-01.json", "d/call/2026-07-02.json", "d/call/2026-07-03.json", "d/call/2026-07-06.json", "d/call/2026-07-07.json", "d/call/2026-07-08.json", "d/call/2026-07-09.json", "d/call/2026-07-10.json", "d/call/2026-07-13.json", "d/call/2026-07-14.json", "d/call/2026-07-15.json", "d/call/2026-07-16.json", "d/call/2026-07-17.json", "d/call/2026-07-20.json", "d/call/2026-07-21.json", "d/call/2026-07-22.json", "d/call/2026-07-23.json", "d/call/2026-07-24.json", "d/call/2026-07-27.json", "d/call/2026-07-28.json", "d/call/2026-07-29.json", "d/call/2026-07-30.json", "d/call/2026-07-31.json", "d/call/2026-08-03.json", "d/call/2026-08-04.json", "d/call/2026-08-05.json", "d/call/2026-08-06.json", "d/call/2026-08-07.json", "d/call/2026-08-10.json", "d/call/2026-08-11.json", "d/call/2026-08-12.json", "d/call/2026-08-13.json", "d/call/2026-08-14.json", "d/call/2026-08-17.json", "d/call/2026-08-18.json", "d/call/2026-08-19.json", "d/call/2026-08-20.json", "d/call/2026-08-21.json", "d/call/2026-08-24.json", "d/call/2026-08-25.json", "d/call/2026-08-26.json", "d/call/2026-08-27.json", "d/call/2026-08-28.json", "d/call/2026-08-31.json", "d/call/2026-09-01.json", "d/call/2026-09-02.json", "d/call/2026-09-03.json", "d/call/2026-09-04.json", "d/call/2026-09-07.json", "d/call/2026-09-08.json", "d/call/2026-09-09.json", "d/call/2026-09-10.json", "d/call/2026-09-11.json", "d/call/2026-09-15.json", "d/call/2026-09-16.json", "d/call/2026-09-17.json", "d/call/2026-09-18.json", "d/call/2026-09-21.json", "d/call/2026-09-22.json", "d/call/2026-09-23.json", "d/call/2026-09-24.json", "d/call/2026-09-25.json", "d/call/2026-09-28.json", "d/call/2026-09-29.json", "d/call/2026-09-30.json", "d/call/2026-10-01.json", "d/call/2026-10-05.json", "d/call/2026-10-06.json", "d/call/2026-10-07.json", "d/call/2026-10-08.json", "d/call/2026-10-09.json", "d/call/2026-10-12.json", "d/call/2026-10-13.json", "d/call/2026-10-14.json", "d/call/2026-10-15.json", "d/call/2026-10-16.json", "d/call/2026-10-19.json", "d/call/2026-10-21.json", "d/call/2026-10-22.json", "d/call/2026-10-23.json", "d/call/2026-10-26.json", "d/call/2026-10-27.json", "d/call/2026-10-28.json", "d/call/2026-10-29.json"], CACHE = "pc-v4nu01";
 (async () => {
   const el = document.getElementById("offline");
   if (!("serviceWorker" in navigator) || !window.caches) { el.textContent = "offline: not supported here, open from the home screen icon"; return; }
@@ -96,7 +97,7 @@ const FILES = ["./", "index.html", "lwc.js", "manifest.json", "icon.png", "d/202
 
 <script>
 const LWC = window.LightweightCharts;
-const C = { buy:"#26a69a", sell:"#ef5350", buyDim:"#1d6b63", sellDim:"#8f3634", muted:"#5d6b80", t3:"#ffb300", why:"#4dd0e1" };
+const C = { cas:"#ab47bc", buy:"#26a69a", sell:"#ef5350", buyDim:"#1d6b63", sellDim:"#8f3634", muted:"#5d6b80", t3:"#ffb300", why:"#4dd0e1" };
 const state = { inst:"NIFTY", tf:"3m", date:null, dates:[], cache:{}, d:null, byTime:{}, sigByTime:{}, trades:[] };
 const store = { get(k) { try { return localStorage.getItem("pocket." + k); } catch (e) { return null; } },
                 set(k, v) { try { localStorage.setItem("pocket." + k, v); } catch (e) {} } };
@@ -149,22 +150,55 @@ document.getElementById("pDn").onclick = () => priceView(1, -0.15);
 document.getElementById("pFit").onclick = () => { pv.z = 1; pv.m = 0; priceView(1, 0); };
 
 /* the same rules as the classroom page (precomputed signs, drawn here) */
-// buy and sell signs one at a time: a sign on the same side as the last kept one is hidden
-function alternate(signals) {
+// buy and sell signs one at a time: a sign on the same side as the last kept one is hidden.
+// Usefulness is re-checked on this chain (user 2026-11-01): the window is the
+// candles after the last SHOWN sign up to this sign's candle; a buy is useful
+// when its prev candle's open or its own open is one of the 2 lowest opens in
+// it (a sell: 2 highest). The first sign of the chain keeps the engine verdict.
+function alternate(signals, candles, from = 0) {   // from: call signs before 15:15 stay out of the chain
   let last = null, lastTs = null;
   const order = [...signals].sort((a, b) => (a.fire_ts - b.fire_ts) || (a.entry_ts - b.entry_ts));
+  const idx = {}; candles.forEach((c, i) => idx[c[0]] = i);
   for (const s of order) {
+    if (s.engine_useful === undefined) s.engine_useful = s.useful;
+    s.useful = s.engine_useful; s.u_why = null;
     s.skipped = false; s.after_ts = null;
-    if (s.scc_reverted) continue;
+    if (s.scc_reverted || s.entry_ts < from) continue;
     if (s.side === last) { s.skipped = true; s.after_ts = lastTs; continue; }
+    const e = idx[s.entry_ts], a = idx[lastTs];
+    if (lastTs != null && e != null && a != null && e > a) {
+      const opens = candles.slice(a + 1, e + 1).map(c => c[1]);
+      const top2 = [...opens].sort((x, y) => s.side === "BUY" ? x - y : y - x).slice(0, 2);
+      const pOpen = candles[e - 1][1], eOpen = candles[e][1];
+      s.useful = top2.includes(pOpen) || top2.includes(eOpen);
+      s.u_why = { since: lastTs, n: opens.length, top2, pOpen, eOpen };
+    }
     last = s.side; lastTs = s.entry_ts;
   }
 }
 function markers(bars) {
   const mk = [], first = bars.length ? bars[0].time : 0;
+  // (user 2026-11-02) NIFTY call chart, CAS system: the index freezes at 15:15,
+  // so the call's own signs and T3 count only from 15:15; before it the index
+  // signs are copied onto the call candle that holds their time (marked i·)
+  const isCall = state.inst === "CALL", from = isCall ? istTs(state.d.date, "15:15") : 0;
+  if (isCall && state.idx) {
+    for (const s of state.idx.s) {
+      if (s.skipped || s.scc_reverted || s.entry_ts >= from || s.entry_ts < first) continue;
+      if (s.side === "BUY" ? !on("tBuy") : !on("tSell")) continue;
+      if (on("tNU") && s.useful) continue;
+      let i = bars.length - 1; while (i > 0 && bars[i].time > s.entry_ts) i--;
+      if (bars[i].time > s.entry_ts || s.entry_ts >= bars[i].time + state.step) continue;
+      const buy = s.side === "BUY";
+      mk.push({ time:bars[i].time, position: buy ? "belowBar" : "aboveBar", color: buy ? (s.useful ? C.buy : C.buyDim) : (s.useful ? C.sell : C.sellDim),
+                shape:"circle", text:"i·" + (s.kind === "no_wick" ? "NW" : (buy ? "BC" : "SC")) + (s.t3_crossed ? "*" : "") });
+    }
+  }
+  if (isCall && state.d.session_close === "15:40" && state.byTime[from]) mk.push({ time:from, position:"aboveBar", color:C.cas, shape:"square", text:"CAS" });
   for (const s of state.d.s) {
-    if (s.skipped || s.entry_ts < first) continue;
+    if (s.skipped || s.entry_ts < first || s.entry_ts < from) continue;
     if (s.scc_reverted ? !on("tScc") : (s.side === "BUY" ? !on("tBuy") : !on("tSell"))) continue;
+    if (on("tNU") && s.useful) continue;   // (user 2026-11-01) only the not-useful signs
     const buy = s.side === "BUY";
     let text = s.kind === "no_wick" ? "NW" : (buy ? "BC" : "SC");
     if (s.t3_crossed) text += "*";
@@ -174,7 +208,7 @@ function markers(bars) {
   }
   if (on("tT3")) for (let i = 1; i < bars.length; i++) {
     const b = bars[i], p = bars[i - 1], len = p.high - p.low;
-    if (!(len > 0)) continue;
+    if (!(len > 0) || b.time < from) continue;
     if (b.high >= b.open + len) mk.push({ time:b.time, position:"belowBar", color:C.t3, shape:"circle", text:"T3 B" });
     if (b.low <= b.open - len) mk.push({ time:b.time, position:"aboveBar", color:C.t3, shape:"circle", text:"T3 S" });
   }
@@ -211,6 +245,12 @@ function draw(fit) {
   }
   const last = state.bars[state.bars.length - 1];
   const today = d.s.filter(s => !s.scc_reverted && !s.skipped && s.entry_ts >= (d.day_start || 0));
+  if (state.inst === "CALL") {
+    const from = istTs(d.date, "15:15"), late = d.s.filter(s => !s.scc_reverted && !s.skipped && s.entry_ts >= from);
+    document.getElementById("legend").innerHTML = `NIFTY ${d.strike} ${d.side} · ${d.tf} · ${d.date} (+ last 15 candles of the day before) · ${esc(d.strike_rule || "")}<br>`
+      + `call signs from 15:15${d.session_close === "15:40" ? " (CAS, call runs to 15:40)" : ""}: <span class="up">${late.filter(s => s.side === "BUY").length} buy</span> · <span class="dn">${late.filter(s => s.side === "SELL").length} sell</span> · before 15:15 = index signs (i·)`;
+    return;
+  }
   document.getElementById("legend").innerHTML = state.inst === "NIFTY"
     ? `NIFTY 50 · ${d.tf} · ${d.date} (+ last 15 candles of ${d.prev_date || "—"})<br>signs this day: <span class="up">${today.filter(s => s.side === "BUY").length} buy</span> · <span class="dn">${today.filter(s => s.side === "SELL").length} sell</span>`
     : `BTCUSD · ${d.tf} · ${dmy(state.bars[0].time)} → ${dmy(last.time)} ${hhmm(last.time)} IST · swipe left for older days<br>saved ${dmy(last.time)}, not live`;
@@ -242,6 +282,7 @@ function checkSign(c, f, side) {
     why.push(`fired at ${hhmm(s.fire_ts)}, then the SCC line ${n2(s.scc_level)} broke at ${hhmm(s.scc_ts)}, so the sign never existed`);
   } else if (s) {
     ans = `YES, a ${w} sign` + (s.useful ? " · useful" : " · not useful") + (s.t3_crossed ? " · T3 crossed" : "");
+    if (s.u_why) why.push(`useful check: since the ${buy ? "sell" : "buy"} sign at ${hhmm(s.u_why.since)}, ${s.u_why.n} candles, 2 ${buy ? "lowest" : "highest"} opens ${s.u_why.top2.map(n2).join(", ")} · prev open ${n2(s.u_why.pOpen)} · this open ${n2(s.u_why.eOpen)}`);
     why.push(s.path === "A" ? `path A: the prev candle (${hhmm(f.prev_time)}) is a ${buy ? "buying" : "selling"} candle`
                             : `path B: this candle was no-wick when it crossed T2`);
     why.push(`T2 ${n2(t2)} = open ${n2(s.entry_open)} ${buy ? "+" : "−"} ceil(${n2(s.prev_len)}/3), crossed at ${hhmm(s.fire_ts)}${s.fire_instant === "open" ? " (at the open)" : ""}`);
@@ -265,7 +306,7 @@ function checkSign(c, f, side) {
 function detail(t) {
   const c = state.byTime[t]; if (!c) return;
   const f = state.d.f[t];
-  let h = `<h2>Candle</h2><div class="big">${state.inst === "NIFTY" ? "NIFTY" : "BTCUSD"} · ${dmy(t)} ${hhmm(t)} · ${state.d.tf}</div><table>
+  let h = `<h2>Candle</h2><div class="big">${state.inst === "NIFTY" ? "NIFTY" : state.inst === "CALL" ? `NIFTY ${state.d.strike} ${state.d.side}` : "BTCUSD"} · ${dmy(t)} ${hhmm(t)} · ${state.d.tf}</div><table>
     <tr><td>O / H / L / C</td><td>${n2(c.open)} / ${n2(c.high)} / ${n2(c.low)} / ${n2(c.close)}</td></tr>`;
   if (f) {
     h += `<tr><td>prev candle</td><td>${hhmm(f.prev_time)} · length ${n2(f.prev_len)}</td></tr>
@@ -296,7 +337,7 @@ async function getJSON(path) {
   return state.cache[path];
 }
 async function load(fit = true) {
-  const isN = state.inst === "NIFTY";
+  const isN = state.inst !== "BTC";   // NIFTY and its call share days and 1m/3m/5m
   // NIFTY has 1m/3m/5m, BTC has 3m/15m (user 2026-10-30)
   const tfsOf = isN ? ["1m", "3m", "5m"] : ["3m", "15m"];
   if (!tfsOf.includes(state.tf)) state.tf = isN ? "3m" : "15m";
@@ -305,9 +346,12 @@ async function load(fit = true) {
   for (const id of ["prev", "next", "date"]) document.getElementById(id).hidden = !isN;
   document.getElementById("legend").textContent = "loading…";
   try {
-    const d = isN ? (await getJSON(`d/${state.date}.json`))[state.tf] : await getJSON(`d/btc_${state.tf}.json`);
+    const d = state.inst === "CALL" ? (await getJSON(`d/call/${state.date}.json`))[state.tf]
+            : isN ? (await getJSON(`d/${state.date}.json`))[state.tf] : await getJSON(`d/btc_${state.tf}.json`);
+    state.idx = null;
+    if (state.inst === "CALL") { const ix = (await getJSON(`d/${state.date}.json`))[state.tf]; if (ix) { alternate(ix.s, ix.c); state.idx = ix; } }
     if (!d) { document.getElementById("legend").textContent = `No ${state.tf} data saved for ${state.date}.`; series.setData([]); return; }
-    state.d = d; alternate(d.s);
+    state.d = d; alternate(d.s, d.c, state.inst === "CALL" ? istTs(d.date, "15:15") : 0);
     state.sigByTime = {}; for (const s of d.s) (state.sigByTime[s.entry_ts] ||= []).push(s);
     draw(fit);
     document.getElementById("detail").innerHTML = `<h2>Candle</h2><div class="hint">Tap any candle to see its T2, T3, no-wick and whether it gave a sign.</div>`;
@@ -324,7 +368,7 @@ for (const b of document.querySelectorAll("[data-tf]")) b.onclick = () => {
   for (const x of document.querySelectorAll("[data-tf]")) x.classList.toggle("on", x === b);
   load();
 };
-for (const id of ["tBuy", "tSell", "tT3", "tWhy", "tScc"]) {
+for (const id of ["tBuy", "tSell", "tT3", "tWhy", "tScc", "tNU"]) {
   const el = document.getElementById(id), saved = store.get(id);
   if (saved != null) el.classList.toggle("on", saved === "1");
   el.onclick = () => { el.classList.toggle("on"); store.set(id, on(id) ? "1" : "0"); if (state.d) series.setMarkers(markers(state.bars)); };
@@ -337,7 +381,7 @@ for (const id of ["tBuy", "tSell", "tT3", "tWhy", "tScc"]) {
   const sd = store.get("date"), st = store.get("tf"), si = store.get("inst");
   state.date = state.dates.includes(sd) ? sd : state.dates[state.dates.length - 1];
   if (["1m", "3m", "5m", "15m"].includes(st)) state.tf = st;
-  if (si === "BTC" || si === "NIFTY") state.inst = si;
+  if (["BTC", "NIFTY", "CALL"].includes(si)) state.inst = si;
   sel.value = state.date; document.getElementById("inst").value = state.inst;
   for (const x of document.querySelectorAll("[data-tf]")) x.classList.toggle("on", x.dataset.tf === state.tf);
   document.getElementById("note").textContent = `${state.dates.length} days saved, ${state.dates[0].slice(5)} → ${state.dates[state.dates.length - 1].slice(5)}`;
